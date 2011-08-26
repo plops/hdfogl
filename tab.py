@@ -1,4 +1,5 @@
 import tables
+import time
 from numpy import *
 import threading
 from OpenGL.GL import *
@@ -7,12 +8,13 @@ from OpenGL.GLU import *
 
 
 
-f=tables.openFile("/home/martin/data/23_8_mtA488GSH15series_B.h5")
+f=tables.openFile("/home/martin/data/23_8_mtA488_GSH15series_A.h5")
+print "data loaded"
 dat=f.root.ImageData
 
-amin(dat[:,:,3])
+#amin(dat[:,:,3])
 
-cast['uint8'](255*(dat[:,1,3]-amin(dat[:,1,3]))/(amax(dat[:,1,3])-amin(dat[:,1,3])))
+#cast['uint8'](255*(dat[:,1,3]-amin(dat[:,1,3]))/(amax(dat[:,1,3])-amin(dat[:,1,3])))
 
 def norm_u8(a):
     mi=amin(a)
@@ -29,42 +31,62 @@ def init(w,h):
     glOrtho(0,w,h,0,-1,1)
     glMatrixMode(GL_MODELVIEW)
 
-def reset_count():
-    count=0 
 
-reset_count()
+def next_power_of_two(n):
+    i=1
+    while(i<n):
+        i=i*2
+    return i
+
+
+
+count=0 
 
 tex=-1
 
-
-def drawfun():
+def load_texture():
     global count
     global tex
-    glClearColor(1,0,0,1)
+    global dat
     if count==0:
         count=count+1
         if tex>=0:
             glDeleteTextures(tex)
+            print "delete old texture"
+            
+        print "new texture"
         glEnable(GL_TEXTURE_2D)
         tex=glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D,int(tex))
-       # glMatrixMode(GL_COLOR_MATRIX)
-       # glScaled(10,10,10)
-        glTexImage2D(GL_TEXTURE_2D,0,GL_LUMINANCE,dat.shape[1],dat.shape[2],0,
-                     GL_LUMINANCE,GL_UNSIGNED_BYTE,norm_u8(dat[10,:,:]))
-       # glMatrixMode(GL_MODELVIEW)
-        
+        # glMatrixMode(GL_COLOR_MATRIX)
+        # glScaled(10,10,10)
+        glTexImage2D(GL_TEXTURE_2D,0,GL_LUMINANCE,
+                     next_power_of_two(dat.shape[1]),
+                     next_power_of_two(dat.shape[2]),0,
+                     GL_LUMINANCE,GL_UNSIGNED_BYTE,0)
+        glTexSubImage2D(GL_TEXTURE_2D,0,0,0,
+                        dat.shape[1],dat.shape[2],
+                        GL_LUMINANCE,GL_UNSIGNED_BYTE,
+                        norm_u8(dat[12,:,:]))
+    # glMatrixMode(GL_MODELVIEW)
+    
+
+def drawfun():
+    glClearColor(1,0,0,1)
+    load_texture()
     glClear(GL_COLOR_BUFFER_BIT)
     glLoadIdentity()
     glColor4d(1,1,1,1)
-    glTranslated(0,0,0)
+    glTranslated(12,12,0)
+    glScaled(dat.shape[1],dat.shape[2],1)
     glBegin(GL_QUADS)
-    x=dat.shape[1]
-    y=dat.shape[2]
+    x=1 #dat.shape[1]
+    y=1 #dat.shape[2]
     for v in [[0,0],[x,0],[x,y],[0,y]]:
         glVertex2d(*v)
         glTexCoord2d(*v)
     glEnd()
+    time.sleep(1/30.)
     glutSwapBuffers()
     
 def draw():
